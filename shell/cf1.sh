@@ -1,3 +1,4 @@
+
 #!/bin/bash
 # better-cloudflare-ip
 
@@ -414,44 +415,35 @@ else
 fi
 }
 
-function datacheck(){ 
-clear 
-echo "If the download of the following files fails, you can manually visit the URL to download and save them to the same directory" 
-echo "https://www.baipiao.eu.org/cloudflare/colo Save as colo.txt" 
-echo "https://www.baipiao.eu.org/cloudflare/url Save as url.txt" 
-echo "https://raw.githubusercontent.com/woshishiq1/better-cloudflare-ip/refs/heads/master/batch/ips-v4.txt Save as ips-v4.txt" 
-echo "https://raw.githubusercontent.com/woshishiq1/better-cloudflare-ip/refs/heads/master/batch/ips-v6.txt Save as ips-v6.txt" 
-
-while true 
-do 
-    if [ ! -f "colo.txt" ] 
-    then 
-        echo "Download data center information from server colo.txt" 
-        curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/colo -o colo.txt 
-
-    elif [ ! -f "url.txt" ] 
-    then 
-        echo "Download the speed test file address from the server url.txt" 
-        curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/url -o url.txt 
-
-    elif [ ! -f "ips-v4.txt" ] 
-    then 
-        echo "Download IPV4 data from GitHub ips-v4.txt" 
-        curl --retry 2 -s \
-https://raw.githubusercontent.com/woshishiq1/better-cloudflare-ip/refs/heads/master/batch/ips-v4.txt \
--o ips-v4.txt 
-
-    elif [ ! -f "ips-v6.txt" ] 
-    then 
-        echo "Download IPV6 data from GitHub ips-v6.txt" 
-        curl --retry 2 -s \
-https://raw.githubusercontent.com/woshishiq1/better-cloudflare-ip/refs/heads/master/batch/ips-v6.txt \
--o ips-v6.txt 
-
-    else 
-        break 
-    fi 
-done 
+function datacheck(){
+clear
+echo "If the download of the following files fails, you can manually visit the URL to download and save them to the same directory"
+echo "https://www.baipiao.eu.org/cloudflare/colo Save as colo.txt"
+echo "https://www.baipiao.eu.org/cloudflare/url Save as url.txt"
+echo "https://www.baipiao.eu.org/cloudflare/ips-v4 Save as ips-v4.txt"
+echo "https://www.baipiao.eu.org/cloudflare/ips-v6 Save as ips-v6.txt"
+while true
+do
+	if [ ! -f "colo.txt" ]
+	then
+		echo "Download data center information from server colo.txt"
+		curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/colo -o colo.txt
+	elif [ ! -f "url.txt" ]
+	then
+		echo "Download the speed test file address from the server url.txt"
+		curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/url -o url.txt
+	elif [ ! -f "ips-v4.txt" ]
+	then
+		echo "Download IPV4 data from server ips-v4.txt"
+		curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/ips-v4 -o ips-v4.txt
+	elif [ ! -f "ips-v6.txt" ]
+	then
+		echo "Download IPV6 data from server ips-v6.txt"
+		curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/ips-v6 -o ips-v6.txt
+	else
+		break
+	fi
+done
 }
 datacheck
 url=$(sed -n '1p' url.txt)
