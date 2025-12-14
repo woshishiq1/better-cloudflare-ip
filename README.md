@@ -74,7 +74,7 @@ Windows 8及以上版本用户推荐使用UTF-8编码版本
 目前已经测试 Termux、OpenWrt、Ubuntu、Debian、CentOS、MacOS、Raspbian、Armbian、iSH
 
 ``` bash
-curl https://raw.githubusercontent.com/badafans/better-cloudflare-ip/master/shell/cf.sh -o cf.sh && chmod +x cf.sh && ./cf.sh
+curl https://ghfast.top/https://raw.githubusercontent.com/woshishiq1/better-cloudflare-ip/master/shell/cf1.sh -o cf1.sh && chmod +x cf1.sh && ./cf1.sh
 ```
 
 ## 引用声明
