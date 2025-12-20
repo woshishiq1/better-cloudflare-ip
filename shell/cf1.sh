@@ -1,4 +1,3 @@
-
 #!/bin/bash
 # better-cloudflare-ip
 
