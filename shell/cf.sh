@@ -1,5 +1,5 @@
 #!/bin/bash
-# better-cloudflare-ip (Fixed Version for Mobile/Termux)
+# better-cloudflare-ip (Full Fixed Version for Mobile/Termux)
 
 function bettercloudflareip(){
 read -p "请设置期望的带宽大小(默认最小1,单位 Mbps):" bandwidth
@@ -7,8 +7,8 @@ read -p "请设置RTT测试进程数(默认10,最大50):" tasknum
 if [ -z "$bandwidth" ]; then bandwidth=1; fi
 if [ "$bandwidth" -eq 0 ]; then bandwidth=1; fi
 if [ -z "$tasknum" ]; then tasknum=10; fi
-if [ "$tasknum" -eq 0 ]; then tasknum=10; fi
-if [ "$tasknum" -gt 50 ]; then tasknum=50; fi
+if [ "$tasknum" -eq 0 ]; then echo "进程数不能为0,自动设置为默认值"; tasknum=10; fi
+if [ "$tasknum" -gt 50 ]; then echo "超过最大进程限制,自动设置为最大值"; tasknum=50; fi
 
 # 带宽换算为字节
 speed=$((bandwidth * 128 * 1024))
@@ -138,7 +138,7 @@ rm -rf rtt/$1.txt
 function speedtesthttps(){
 rm -rf log.txt speed.txt
 curl --resolve $domain:443:$1 https://$domain/$file -o /dev/null --connect-timeout 2 --max-time 10 > log.txt 2>&1
-# 改进的提取逻辑：直接处理数字、k、M，并统一换算为字节
+# 统一的数值清洗与字节换算逻辑
 cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' > raw_speed.txt
 while read -r line; do
     if [[ $line == *M* ]]; then
@@ -276,18 +276,59 @@ do
 done
 }
 
+# 恢复并加固的单IP测速逻辑
+function singlehttps(){
+read -p "请输入需要测速的IP: " ip
+read -p "请输入需要测速的端口(默认443): " port
+if [ -z "$ip" ]; then
+	echo "未输入IP"
+	return
+fi
+port=${port:-443}
+echo "正在测速 $ip 端口 $port"
+# 使用 -s 静默执行并提取字节速度，使用awk防错计算kb/s
+speed_raw=$(curl --resolve $domain:$port:$ip https://$domain:$port/$file -o /dev/null -s --connect-timeout 5 --max-time 15 -w "%{speed_download}")
+speed_download=$(echo "${speed_raw:-0}" | awk '{printf "%.0f\n", $1/1024}')
+}
+
+function singlehttp(){
+read -p "请输入需要测速的IP: " ip
+read -p "请输入需要测速的端口(默认80): " port
+if [ -z "$ip" ]; then
+	echo "未输入IP"
+	return
+fi
+port=${port:-80}
+echo "正在测速 $ip 端口 $port"
+if [ $(echo $ip | grep : | wc -l) == 0 ]; then
+	speed_raw=$(curl -x $ip:$port http://$domain:$port/$file -o /dev/null -s --connect-timeout 5 --max-time 15 -w "%{speed_download}")
+else
+	speed_raw=$(curl -x [$ip]:$port http://$domain:$port/$file -o /dev/null -s --connect-timeout 5 --max-time 15 -w "%{speed_download}")
+fi
+speed_download=$(echo "${speed_raw:-0}" | awk '{printf "%.0f\n", $1/1024}')
+}
+
 function datacheck(){
 clear
 echo "检查必要组件..."
 for pkg in curl awk sed bc; do
-    if ! command -v $pkg &> /dev/null; then echo "缺少组件 $pkg, 请尝试安装它"; fi
+    if ! command -v $pkg &> /dev/null; then echo "提示: 缺少组件 $pkg, 建议通过包管理器安装以获得最佳体验"; fi
 done
+echo "如果下面这些文件下载失败,可以手动访问网址保存至同级目录"
 while true
 do
-	if [ ! -f "colo.txt" ]; then curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/colo -o colo.txt
-	elif [ ! -f "url.txt" ]; then curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/url -o url.txt
-	elif [ ! -f "ips-v4.txt" ]; then curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/ips-v4 -o ips-v4.txt
-	elif [ ! -f "ips-v6.txt" ]; then curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/ips-v6 -o ips-v6.txt
+	if [ ! -f "colo.txt" ]; then 
+        echo "下载 colo.txt..."
+        curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/colo -o colo.txt
+	elif [ ! -f "url.txt" ]; then 
+        echo "下载 url.txt..."
+        curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/url -o url.txt
+	elif [ ! -f "ips-v4.txt" ]; then 
+        echo "下载 ips-v4.txt..."
+        curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/ips-v4 -o ips-v4.txt
+	elif [ ! -f "ips-v6.txt" ]; then 
+        echo "下载 ips-v6.txt..."
+        curl --retry 2 -s https://www.baipiao.eu.org/cloudflare/ips-v6 -o ips-v6.txt
 	else break; fi
 done
 }
@@ -303,15 +344,44 @@ do
 	echo "2. IPV4优选"
 	echo "3. IPV6优选(TLS)"
 	echo "4. IPV6优选"
-	echo "0. 退出"
+	echo "5. 单IP测速(TLS)"
+	echo "6. 单IP测速"
+	echo "7. 清空缓存"
+	echo "8. 更新数据"
+	echo -e "0. 退出\n"
 	read -p "请选择菜单(默认0): " menu
 	menu=${menu:-0}
-	case $menu in
-		0) clear; echo "退出成功"; break ;;
-		1) ips=ipv4; filename=ips-v4.txt; tls=1; bettercloudflareip; break ;;
-		2) ips=ipv4; filename=ips-v4.txt; tls=0; bettercloudflareip; break ;;
-		3) ips=ipv6; filename=ips-v6.txt; tls=1; bettercloudflareip; break ;;
-		4) ips=ipv6; filename=ips-v6.txt; tls=0; bettercloudflareip; break ;;
-		*) echo "无效选择" ;;
-	esac
+	
+	if [ "$menu" == "0" ]; then
+		clear
+		echo "退出成功"
+		break
+	elif [ "$menu" == "1" ]; then
+		ips=ipv4; filename=ips-v4.txt; tls=1; bettercloudflareip; break
+	elif [ "$menu" == "2" ]; then
+		ips=ipv4; filename=ips-v4.txt; tls=0; bettercloudflareip; break
+	elif [ "$menu" == "3" ]; then
+		ips=ipv6; filename=ips-v6.txt; tls=1; bettercloudflareip; break
+	elif [ "$menu" == "4" ]; then
+		ips=ipv6; filename=ips-v6.txt; tls=0; bettercloudflareip; break
+	elif [ "$menu" == "5" ]; then
+		singlehttps
+		clear
+		echo "$ip 平均速度 ${speed_download:-0} kB/s"
+	elif [ "$menu" == "6" ]; then
+		singlehttp
+		clear
+		echo "$ip 平均速度 ${speed_download:-0} kB/s"
+	elif [ "$menu" == "7" ]; then
+		rm -rf rtt rtt.txt log.txt speed.txt
+		clear
+		echo "缓存已经清空"
+	elif [ "$menu" == "8" ]; then
+		rm -rf colo.txt url.txt ips-v4.txt ips-v6.txt
+		datacheck
+		clear
+		echo "数据中心信息与测试地址已更新"
+	else
+		echo "无效选择，请重新输入"
+	fi
 done
