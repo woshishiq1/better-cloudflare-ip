@@ -82,11 +82,11 @@ do
 				n=1
 				break
 			else
-				avgms=$(( $(echo $rsp | awk -F_ '{printf ("%d\n",$1*1000000)}') + avgms ))
+				avgms=$(( $(echo $rsp | awk -F_ '{printf ("%d\n",$1*1000)}') + avgms ))
 				n=$((n+1))
 			fi
 		else
-			avgms=$((avgms/3000))
+			avgms=$((avgms/3))
 			if [ $avgms -lt 10 ]; then echo 00$avgms $ip >> rtt/$1.log
 			elif [ $avgms -ge 10 ] && [ $avgms -lt 100 ]; then echo 0$avgms $ip >> rtt/$1.log
 			else echo $avgms $ip >> rtt/$1.log; fi
@@ -120,11 +120,11 @@ do
 				n=1
 				break
 			else
-				avgms=$(( $(echo $rsp | awk -F_ '{printf ("%d\n",$1*1000000)}') + avgms ))
+				avgms=$(( $(echo $rsp | awk -F_ '{printf ("%d\n",$1*1000)}') + avgms ))
 				n=$((n+1))
 			fi
 		else
-			avgms=$((avgms/3000))
+			avgms=$((avgms/3))
 			if [ $avgms -lt 10 ]; then echo 00$avgms $ip >> rtt/$1.log
 			elif [ $avgms -ge 10 ] && [ $avgms -lt 100 ]; then echo 0$avgms $ip >> rtt/$1.log
 			else echo $avgms $ip >> rtt/$1.log; fi
@@ -138,45 +138,59 @@ rm -rf rtt/$1.txt
 }
 
 function speedtesthttps(){
-rm -rf log.txt speed.txt raw_speed.txt
-curl --resolve $domain:443:$1 https://$domain/$file -o /dev/null --connect-timeout 2 --max-time 10 > log.txt 2>&1
-cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' > raw_speed.txt
-while read -r line; do
-    if [[ $line == *M* ]]; then echo "$line" | sed 's/M//g' | awk '{printf "%.0f\n", $1 * 1048576}' >> speed.txt
-    elif [[ $line == *k* ]]; then echo "$line" | sed 's/k//g' | awk '{printf "%.0f\n", $1 * 1024}' >> speed.txt
-    elif [[ "$line" =~ ^[0-9.]+$ ]]; then echo "$line" | awk '{printf "%.0f\n", $1}' >> speed.txt
-    fi
-done < raw_speed.txt
-max=0
-for i in $(cat speed.txt 2>/dev/null); do
-    i_int=$(echo $i | cut -f1 -d'.')
-    if [ "${i_int:-0}" -ge "${max:-0}" ]; then max=$i_int; fi
+rm -rf log.txt speed.txt
+curl --resolve $domain:443:$1 https://$domain/$file -o /dev/null --connect-timeout 1 --max-time 10 > log.txt 2>&1
+cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep -v 'k\|M' >> speed.txt
+for i in `cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep k | sed 's/k//g'`
+do
+	k=$(echo | awk '{print '$i'*1024 }' | awk -F\. '{print $1}')
+	echo $k >> speed.txt
 done
-rm -rf log.txt speed.txt raw_speed.txt
+for i in `cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep M | sed 's/M//g'`
+do
+	M=$(echo | awk '{print '$i'*1048576 }' | awk -F\. '{print $1}')
+	echo $M >> speed.txt
+done
+max=0
+for i in $(cat speed.txt 2>/dev/null)
+do
+	if [ $i -ge $max ]
+	then
+		max=$i
+	fi
+done
+rm -rf log.txt speed.txt
 echo $max
 }
 
 function speedtesthttp(){
-rm -rf log.txt speed.txt raw_speed.txt
+rm -rf log.txt speed.txt
 if [ $(echo $1 | grep : | wc -l) == 0 ]
 then
-	curl -x $1:80 http://$domain/$file -o /dev/null --connect-timeout 2 --max-time 10 > log.txt 2>&1
+	curl -x $1:80 http://$domain/$file -o /dev/null --connect-timeout 1 --max-time 10 > log.txt 2>&1
 else
-	curl -x [$1]:80 http://$domain/$file -o /dev/null --connect-timeout 2 --max-time 10 > log.txt 2>&1
+	curl -x [$1]:80 http://$domain/$file -o /dev/null --connect-timeout 1 --max-time 10 > log.txt 2>&1
 fi
-cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' > raw_speed.txt
-while read -r line; do
-    if [[ $line == *M* ]]; then echo "$line" | sed 's/M//g' | awk '{printf "%.0f\n", $1 * 1048576}' >> speed.txt
-    elif [[ $line == *k* ]]; then echo "$line" | sed 's/k//g' | awk '{printf "%.0f\n", $1 * 1024}' >> speed.txt
-    elif [[ "$line" =~ ^[0-9.]+$ ]]; then echo "$line" | awk '{printf "%.0f\n", $1}' >> speed.txt
-    fi
-done < raw_speed.txt
-max=0
-for i in $(cat speed.txt 2>/dev/null); do
-    i_int=$(echo $i | cut -f1 -d'.')
-    if [ "${i_int:-0}" -ge "${max:-0}" ]; then max=$i_int; fi
+cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep -v 'k\|M' >> speed.txt
+for i in `cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep k | sed 's/k//g'`
+do
+	k=$(echo | awk '{print '$i'*1024 }' | awk -F\. '{print $1}')
+	echo $k >> speed.txt
 done
-rm -rf log.txt speed.txt raw_speed.txt
+for i in `cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep M | sed 's/M//g'`
+do
+	M=$(echo | awk '{print '$i'*1048576 }' | awk -F\. '{print $1}')
+	echo $M >> speed.txt
+done
+max=0
+for i in $(cat speed.txt 2>/dev/null)
+do
+	if [ $i -ge $max ]
+	then
+		max=$i
+	fi
+done
+rm -rf log.txt speed.txt
 echo $max
 }
 
@@ -246,7 +260,7 @@ do
 			cat rtt/*.log > rtt.txt
 			status=0
 			echo "IP address to be tested"
-			cat rtt.txt | sort | awk '{print $2"\n            IP delay: "$1" ms"}'
+			cat rtt.txt | sort | awk '{print $2" IP delay: "$1" ms"}'
 			for i in `cat rtt.txt | sort | awk '{print $1"_"$2}'`
 			do
 				avgms=$(echo $i | awk -F_ '{print $1}')
