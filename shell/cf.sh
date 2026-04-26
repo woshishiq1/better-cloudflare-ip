@@ -163,16 +163,19 @@ curl --resolve $domain:443:$1 https://$domain/$file -o /dev/null --connect-timeo
 cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep -v 'k\|M' >> speed.txt
 for i in `cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep k | sed 's/k//g'`
 do
-	k=$(echo | awk '{print '$i'*1024 }' | awk -F\. '{print $1}')
+	k=$i
+	k=$[$k*1024]
 	echo $k >> speed.txt
 done
 for i in `cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep M | sed 's/M//g'`
 do
-	M=$(echo | awk '{print '$i'*1048576 }' | awk -F\. '{print $1}')
+	i=$(echo | awk '{print '$i'*10 }')
+	M=$i
+	M=$[$M*1024*1024/10]
 	echo $M >> speed.txt
 done
 max=0
-for i in `cat speed.txt 2>/dev/null`
+for i in `cat speed.txt`
 do
 	if [ $i -ge $max ]
 	then
@@ -194,16 +197,19 @@ fi
 cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep -v 'k\|M' >> speed.txt
 for i in `cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep k | sed 's/k//g'`
 do
-	k=$(echo | awk '{print '$i'*1024 }' | awk -F\. '{print $1}')
+	k=$i
+	k=$[$k*1024]
 	echo $k >> speed.txt
 done
 for i in `cat log.txt | tr '\r' '\n' | awk '{print $NF}' | sed '1,3d;$d' | grep M | sed 's/M//g'`
 do
-	M=$(echo | awk '{print '$i'*1048576 }' | awk -F\. '{print $1}')
+	i=$(echo | awk '{print '$i'*10 }')
+	M=$i
+	M=$[$M*1024*1024/10]
 	echo $M >> speed.txt
 done
 max=0
-for i in `cat speed.txt 2>/dev/null`
+for i in `cat speed.txt`
 do
 	if [ $i -ge $max ]
 	then
